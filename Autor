@@ -1,0 +1,148 @@
+// ==UserScript==
+// @name         Jeja.pl - OP
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Przycisk do pokazywania OPa
+// @author       Pyoter
+// @match        https://memy.jeja.pl/*
+// @exclude      https://memy.jeja.pl/komentarze*.html
+// @exclude      https://dowcipy.jeja.pl/
+// @exclude      https://ubieranki.jeja.pl/
+// @exclude      https://gry.jeja.pl/
+// @exclude      https://grupy.jeja.pl/
+// @grant        none
+// ==/UserScript==
+
+// do użytkownika: tldr skrypt otwiera mema w tle, pobiera autora i wyświetla go przy tytule. szybkość między kliknięciem a wyświetleniem zależy od Twojego internetu.
+
+// do admina: to niedorzeczne żebym musiał się tym zajmować. to powinna być podstawowa funkcja dodana 15 lat temu
+
+(function() {
+    'use strict';
+
+    const style = document.createElement('style');
+    style.textContent = `
+        .jeja-author-btn {
+            display: inline-block !important;
+            margin-left: 8px;
+            padding: 3px 8px;
+            background: #2a2a2a;
+            color: #fff;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            vertical-align: middle;
+            user-select: none;
+            border: 1px solid #555;
+        }
+        .jeja-author-btn:hover { background: #444; }
+        .jeja-author-result {
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            background: rgba(0,0,0,0.93);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 999999;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            display: none;
+            max-width: 90vw;
+        }
+    `;
+    document.head.appendChild(style);
+
+    const resultBox = document.createElement('div');
+    resultBox.className = 'jeja-author-result';
+    document.body.appendChild(resultBox);
+
+    function showResult(text) {
+        resultBox.textContent = text;
+        resultBox.style.display = 'block';
+        clearTimeout(resultBox.hideTimer);
+        resultBox.hideTimer = setTimeout(() => resultBox.style.display = 'none', 8000);
+    }
+
+    function getIdFromHref(href) {
+        if (!href) return null;
+        let m = href.match(/\/(\d+),/);
+        if (m) return m[1];
+        m = href.match(/(\d{6,})/);
+        return m ? m[1] : null;
+    }
+
+    function fetchAuthor(id, btn) {
+        btn.textContent = '...';
+        btn.style.pointerEvents = 'none';
+
+        fetch(`https://memy.jeja.pl/${id},x.html`, { credentials: 'include' })
+        .then(r => r.text())
+        .then(html => {
+            let author = null;
+
+            let m = html.match(/Dodane przez:\s*<a[^>]*>([^<]+)<\/a>/i);
+            if (m && m[1].trim()) author = m[1].trim();
+
+            if (!author) {
+                m = html.match(/Dodane przez:.*?user,([^"'\s>]+)/i);
+                if (m && m[1].trim()) author = m[1].trim();
+            }
+
+            if (!author) {
+                m = html.match(/Dodane przez:\s*([a-zA-Z0-9_\-]+)/i);
+                if (m && m[1].trim()) author = m[1].trim();
+            }
+
+            if (!author) author = 'Brak autora';
+
+            btn.textContent = author;
+            btn.title = author;
+            showResult(`OP: ${author}`);
+            btn.style.pointerEvents = 'auto';
+        })
+        .catch(() => {
+            btn.textContent = 'Brak autora';
+            showResult('OP: Brak autora');
+            btn.style.pointerEvents = 'auto';
+        });
+    }
+
+    function addButtons() {
+        document.querySelectorAll('a[href*=".html"]').forEach(link => {
+            if (link.dataset.jejaAuthorAdded) return;
+
+            const href = link.getAttribute('href') || '';
+            const id = getIdFromHref(href);
+            if (!id) return;
+
+            if (
+                link.closest('footer') || link.closest('.footer') ||
+                link.closest('#footer') || link.closest('[class*="footer"]')
+            ) return;
+
+            if (link.textContent.trim().length < 2) return;
+
+            const btn = document.createElement('span');
+            btn.className = 'jeja-author-btn';
+            btn.textContent = 'OP';
+            btn.title = 'Pokaż OPa';
+
+            btn.addEventListener('click', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                fetchAuthor(id, btn);
+            });
+
+            link.after(btn);
+            link.dataset.jejaAuthorAdded = '1';
+        });
+    }
+
+    addButtons();
+    const obs = new MutationObserver(addButtons);
+    obs.observe(document.body, { childList: true, subtree: true });
+    setInterval(addButtons, 2500);
+})();
