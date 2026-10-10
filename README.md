@@ -8,3 +8,5 @@
 > Dla Firefox: trzykropek w prawym górnym rogu przeglądarki, kliknij Rozszerzenia i motywy. Znajdź TamperMonkey na liście swoich rozszerzeń, kliknij trzykropek i wejdź w opcje
 3. Gdy już jesteśmy na w ustawieniach TamperMonkey, klikamy + (plusik) na górnej liście. Powinno wyskoczyć Ci miejsce na skrypt z już gotową templatką. Skasuj ją i w jej miejsce wklej cały skrypt
 4. Po wklejeniu zrób CTRL + S lub Plik -> Zapisz
+
+# SKRYPT NA STRZAŁKI JEST BANNABLE!!!!!! JEŚLI GO MASZ, ABSOLUTNIE Z NIEGO NIE KORZYSTAJ!!! 
